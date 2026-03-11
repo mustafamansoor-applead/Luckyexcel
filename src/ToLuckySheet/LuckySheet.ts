@@ -24,6 +24,7 @@ export class LuckySheet extends LuckySheetBase {
     private calcChainEles:Element[]
     private sheetList:IattributeList
     private cellImages: Element[]
+    private includeCharts: boolean
 
     private imageList:ImageList
 
@@ -42,6 +43,7 @@ export class LuckySheet extends LuckySheetBase {
         this.imageList = allFileOption.imageList;
         this.hide = allFileOption.hide;
         this.cellImages = allFileOption.cellImages;
+        this.includeCharts = allFileOption.includeCharts !== false;
 
         //Output
         this.name = sheetName;
@@ -275,12 +277,15 @@ export class LuckySheet extends LuckySheetBase {
                         xdrExt = twoCellAnchor.getInnerElements("xdr:ext")[0]
                     }
                     let imageObject: any = {};
-                    
+
                     let xdr_graphicFrame = twoCellAnchor.getInnerElements("xdr:graphicFrame");
-                    if (xdr_graphicFrame) {
+                    let xdr_pic = twoCellAnchor.getInnerElements("xdr:pic");
+                    if (xdr_graphicFrame && !this.includeCharts && !xdr_pic) {
+                        continue;
+                    }
+                    if (xdr_graphicFrame && this.includeCharts) {
                         imageObject = this.getGraphic(twoCellAnchor, drawingRelsFile)
                     }
-                    let xdr_pic = twoCellAnchor.getInnerElements("xdr:pic");
                     if (xdr_pic) {
                         imageObject = this.getImage(twoCellAnchor, drawingRelsFile)
                     }
@@ -777,6 +782,10 @@ export class LuckySheet extends LuckySheetBase {
         this.sheetFile
       );
       let hyperlink: IluckysheetHyperlink = {};
+      const relationshipList = this.readXml.getElementsByTagName(
+        "Relationships/Relationship",
+        `xl/worksheets/_rels/${this.sheetFile.replace(worksheetFilePath, "")}.rels`
+      );
       for (let i = 0; i < rows.length; i++) {
         let row = rows[i];
         let attrList = row.attributeList;
@@ -790,12 +799,6 @@ export class LuckySheet extends LuckySheetBase {
         // external hyperlink
         if (!_address) {
           let rid = attrList["r:id"];
-          let sheetFile = this.sheetFile;
-          let relationshipList = this.readXml.getElementsByTagName(
-            "Relationships/Relationship",
-            `xl/worksheets/_rels/${sheetFile.replace(worksheetFilePath, "")}.rels`
-          );
-  
           const findRid = relationshipList?.find(
             (e) => e.attributeList["Id"] === rid
           );

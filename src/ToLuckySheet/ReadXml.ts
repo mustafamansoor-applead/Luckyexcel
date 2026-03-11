@@ -59,6 +59,9 @@ class xmloperation {
 
 export class ReadXml extends xmloperation{
     originFile:IuploadfileList
+    private fileByNameCache: Map<string, string> = new Map();
+    private tagQueryCache: Map<string, Element[]> = new Map();
+    private tagLinkQueryCache: Map<string, Element[]> = new Map();
     constructor(files:IuploadfileList){
         super();
         this.originFile = files;
@@ -69,6 +72,10 @@ export class ReadXml extends xmloperation{
     * @return Xml element calss
     */
     getElementsByTagName(path:string, fileName:string, isFile: boolean = true): Element[]{
+        const cacheKey = isFile ? `${fileName}::${path}` : null;
+        if (cacheKey && this.tagQueryCache.has(cacheKey)) {
+            return this.tagQueryCache.get(cacheKey);
+        }
         
         let file = this.getFileByName(fileName);
         if (!isFile) file = fileName;
@@ -100,10 +107,17 @@ export class ReadXml extends xmloperation{
             elements.push(ele);
         }
 
+        if (cacheKey) {
+            this.tagQueryCache.set(cacheKey, elements);
+        }
         return elements;
     }
 
     getElementsByTagNameLink(path:string, fileName:string, isFile: boolean = true): Element[]{
+        const cacheKey = isFile ? `${fileName}::${path}` : null;
+        if (cacheKey && this.tagLinkQueryCache.has(cacheKey)) {
+            return this.tagLinkQueryCache.get(cacheKey);
+        }
         let file = this.getFileByName(fileName);
         if (!isFile) file = fileName;
         const ret = this.getElementByTagLink(path, file);
@@ -114,6 +128,9 @@ export class ReadXml extends xmloperation{
             elements.push(ele);
         }
 
+        if (cacheKey) {
+            this.tagLinkQueryCache.set(cacheKey, elements);
+        }
         return elements;
     }
 
@@ -122,11 +139,22 @@ export class ReadXml extends xmloperation{
     * @retrun Select a file from uploadfileList
     */
     private getFileByName(name:string):string{
+        if (this.fileByNameCache.has(name)) {
+            return this.fileByNameCache.get(name);
+        }
+        if (this.originFile[name] != null) {
+            const file = this.originFile[name];
+            this.fileByNameCache.set(name, file);
+            return file;
+        }
         for(let fileKey in this.originFile){
             if(fileKey.indexOf(name)>-1){
-                return this.originFile[fileKey];
+                const file = this.originFile[fileKey];
+                this.fileByNameCache.set(name, file);
+                return file;
             }
         }
+        this.fileByNameCache.set(name, "");
         return "";
     }
 
@@ -138,6 +166,8 @@ export class Element extends xmloperation {
     attributeList:IattributeList
     value:string
     container:string
+    private innerElementsCache: Map<string, Element[] | null> = new Map();
+    private innerElementsTagLinkCache: Map<string, Element[] | null> = new Map();
     constructor(str:string){
         super();
         this.elementString = str;
@@ -175,6 +205,9 @@ export class Element extends xmloperation {
     * @return Element group
     */
     getInnerElements(tag:string):Element[]{
+        if (this.innerElementsCache.has(tag)) {
+            return this.innerElementsCache.get(tag);
+        }
         let ret = this.getElementsByOneTag(tag,this.elementString);
         let elements:Element[] = [];
 
@@ -184,12 +217,17 @@ export class Element extends xmloperation {
         }
 
         if(elements.length==0){
+            this.innerElementsCache.set(tag, null);
             return null;
         }
+        this.innerElementsCache.set(tag, elements);
         return elements;
     }
 
     getInnerElementsTagLink(tag: string): Element[]{
+        if (this.innerElementsTagLinkCache.has(tag)) {
+            return this.innerElementsTagLinkCache.get(tag);
+        }
         const ret = this.getElementByTagLink(tag, this.elementString);
         let elements:Element[] = [];
 
@@ -198,9 +236,11 @@ export class Element extends xmloperation {
             elements.push(ele);
         }
         if(elements.length==0){
+            this.innerElementsTagLinkCache.set(tag, null);
             return null;
         }
 
+        this.innerElementsTagLinkCache.set(tag, elements);
         return elements;
     }
 

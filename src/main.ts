@@ -13,6 +13,11 @@ import { UniverWorkBook } from "./LuckyToUniver/UniverWorkBook";
 import { IWorkbookData } from "@univerjs/core";
 import { formatSheetData, getDataByFile } from "./common/utils";
 import { UniverCsvWorkBook } from "./LuckyToUniver/UniverCsvWorkBook";
+
+export interface TransformExcelToUniverOptions {
+    includeCharts?: boolean;
+}
+
 export class LuckyExcel {
     constructor() { }
     static transformExcelToLucky(excelFile: File,
@@ -74,19 +79,17 @@ export class LuckyExcel {
     static transformExcelToUniver(
         excelFile: File,
         callback?: (files: IWorkbookData, fs?: string) => void,
-        errorHandler?: (err: Error) => void
+        errorHandler?: (err: Error) => void,
+        options: TransformExcelToUniverOptions = {}
     ) {
         let handleZip: HandleZip = new HandleZip(excelFile);
 
         handleZip.unzipFile(function (files: IuploadfileList) {
-            console.log('input------>', files);
             let luckyFile = new LuckyFile(files, excelFile.name);
-            let luckysheetfile = luckyFile.Parse();
-            let exportJson = JSON.parse(luckysheetfile);
-            console.log('output---->', exportJson, files)
+            let exportJson = luckyFile.ParseObject(options);
             if (callback != undefined) {
                 const univerData = new UniverWorkBook(exportJson)
-                callback(univerData.mode, luckysheetfile);
+                callback(univerData.mode);
             }
         },
             function (err: Error) {
@@ -152,7 +155,6 @@ export class LuckyExcel {
         const { snapshot, fileName = `csv_${(new Date).getTime()}.csv`, getBuffer = false, success, error, sheetName } = params;
         try {
             const csv = new CSV(snapshot);
-            console.log(csv);
 
             let contents: string | { [key: string]: string };
             if (sheetName) {

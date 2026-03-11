@@ -8,6 +8,10 @@ import { LuckyFileBase,LuckyFileInfo,LuckySheetBase,LuckySheetCelldataBase, Work
 import {ImageList} from "./LuckyImage";
 import { LuckyDefineNames } from "./LuckyDefineName";
 
+export interface LuckyFileParseOptions {
+    includeCharts?: boolean;
+}
+
 export class LuckyFile extends LuckyFileBase {
 
     private files:IuploadfileList
@@ -124,7 +128,7 @@ export class LuckyFile extends LuckyFileBase {
     /**
     * @return All sheet , include whole information
     */
-    getSheetsFull(isInitialCell:boolean=true){
+    getSheetsFull(isInitialCell:boolean=true, options: LuckyFileParseOptions = {}){
         let sheets = this.readXml.getElementsByTagName("sheets/sheet", workBookFile);
         let sheetList:IattributeList = {};
         for(let key in sheets){
@@ -164,7 +168,8 @@ export class LuckyFile extends LuckyFileBase {
                         drawingFile:drawingFile,
                         drawingRelsFile: drawingRelsFile,
                         hide: hide,
-                        cellImages: this.cellImages
+                        cellImages: this.cellImages,
+                        includeCharts: options.includeCharts !== false
                     }
                 )
                 this.columnWidthSet = [];
@@ -364,7 +369,11 @@ export class LuckyFile extends LuckyFileBase {
     /**
     * @return LuckySheet file json
     */
-    Parse():string{
+    Parse(options: LuckyFileParseOptions = {}):string{
+        return JSON.stringify(this.ParseObject(options));
+    }
+
+    ParseObject(options: LuckyFileParseOptions = {}): ILuckyFile {
         // let xml = this.readXml;
         // for(let key in this.sheetNameList){
         //     let sheetName=this.sheetNameList[key];
@@ -375,7 +384,7 @@ export class LuckyFile extends LuckyFileBase {
 
         this.getWorkBookInfo();
         this.handleWorkBookInfo();
-        this.getSheetsFull();
+        this.getSheetsFull(true, options);
 
         // for(let i=0;i<this.sheets.length;i++){
         //     let sheet = this.sheets[i];
@@ -398,10 +407,10 @@ export class LuckyFile extends LuckyFileBase {
         //     }
         // }
 
-        return this.toJsonString(this);
+        return this.toJsonObject(this);
     }
 
-    private toJsonString(file:ILuckyFile):string{
+    private toJsonObject(file:ILuckyFile):ILuckyFile{
         let LuckyOutPutFile = new LuckyFileBase();
         LuckyOutPutFile.info = file.info;
         LuckyOutPutFile.workbook = file.workbook;
@@ -545,7 +554,7 @@ export class LuckyFile extends LuckyFileBase {
             LuckyOutPutFile.sheets.push(sheetout);
         });
 
-        return JSON.stringify(LuckyOutPutFile);
+        return LuckyOutPutFile;
     }
 
 

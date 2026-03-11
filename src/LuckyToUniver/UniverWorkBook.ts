@@ -38,6 +38,10 @@ export class UniverWorkBook implements IWorkbookData {
         this.name = info.name;
         this.appVersion = info.appversion;
         this.locale = LocaleType.ZH_CN;
+        const sourceSheetsByName = sheets.reduce((map, sheet) => {
+            map[sheet.name] = sheet;
+            return map;
+        }, {} as LuckySheetObj);
 
         const workSheets: Sheets = {},
             order: string[] = [],
@@ -53,8 +57,8 @@ export class UniverWorkBook implements IWorkbookData {
 
         // console.log(workSheets,sheets)
         this.handleHyperLinks(workSheets);
-        this.handleImage(workSheets, sheets);
-        this.handleChart(workSheets, sheets);
+        this.handleImage(workSheets, sourceSheetsByName);
+        this.handleChart(workSheets, sourceSheetsByName);
         this.handleNames(workbook);
         this.handleCondition(sheetsObj);
         this.handleVerification(sheetsObj);
@@ -79,6 +83,10 @@ export class UniverWorkBook implements IWorkbookData {
     }
     private handleHyperLinks = (workSheets: Sheets) => {
         const hyperLinks: { [key: string]: HyperLink[] } = {};
+        const sheetIdByName = Object.values(workSheets).reduce((map, sheet) => {
+            map[sheet.name || ''] = sheet.id || '';
+            return map;
+        }, {} as Record<string, string>);
         for (const key in workSheets) {
             const link = workSheets[key].hyperLink;
             if (!link?.length) continue;
@@ -87,9 +95,7 @@ export class UniverWorkBook implements IWorkbookData {
                 if (typeof d.payload !== 'string') {
                     payload = '#';
                     const gid = d.payload.gid.replace(/'|"/g, '');
-                    const sheetId = Object.values(workSheets).find(
-                        (sheet) => sheet.name === gid
-                    )?.id;
+                    const sheetId = sheetIdByName[gid];
 
                     if (gid && sheetId) {
                         payload += `gid=${sheetId}`;
@@ -109,13 +115,13 @@ export class UniverWorkBook implements IWorkbookData {
             data: JSON.stringify(hyperLinks),
         });
     };
-    private handleImage = (workSheets: Sheets, sheets: IluckySheet[]) => {
+    private handleImage = (workSheets: Sheets, sheetsByName: LuckySheetObj) => {
         const drawerList: {
             [key: string]: { order: string[]; data: { [key: string]: any } };
         } = {};
 
         Object.values(workSheets).forEach((sheet) => {
-            const images = sheets.find((d) => d.name === sheet.name)?.images;
+            const images = sheetsByName[sheet.name || '']?.images;
             if (!images) return;
             const order = Object.keys(images);
             const data: { [key: string]: any } = {};
@@ -200,12 +206,12 @@ export class UniverWorkBook implements IWorkbookData {
         });
     };
 
-    private handleChart = (workSheets: Sheets, sheets: IluckySheet[]) => {
+    private handleChart = (workSheets: Sheets, sheetsByName: LuckySheetObj) => {
         const chartList: {
             [key: string]: any
         } = {};
         Object.values(workSheets).forEach((sheet) => {
-            const charts = sheets.find((d) => d.name === sheet.name)?.charts;
+            const charts = sheetsByName[sheet.name || '']?.charts;
             if (!charts) return;
             charts.forEach((chart) => {
                 if (!chartList[sheet.id!]) {
