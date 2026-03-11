@@ -86,7 +86,8 @@ export class LuckyExcel {
 
         handleZip.unzipFile(function (files: IuploadfileList) {
             let luckyFile = new LuckyFile(files, excelFile.name);
-            let exportJson = luckyFile.ParseObject(options);
+            let luckysheetfile = luckyFile.Parse(options);
+            let exportJson = JSON.parse(luckysheetfile);
             if (callback != undefined) {
                 const univerData = new UniverWorkBook(exportJson)
                 callback(univerData.mode);
