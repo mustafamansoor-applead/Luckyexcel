@@ -72,7 +72,7 @@ export class ReadXml extends xmloperation{
     * @return Xml element calss
     */
     getElementsByTagName(path:string, fileName:string, isFile: boolean = true): Element[]{
-        const cacheKey = isFile ? `${fileName}::${path}` : null;
+        const cacheKey = this.shouldCacheQuery(path, isFile) ? `${fileName}::${path}` : null;
         if (cacheKey && this.tagQueryCache.has(cacheKey)) {
             return this.tagQueryCache.get(cacheKey);
         }
@@ -114,7 +114,7 @@ export class ReadXml extends xmloperation{
     }
 
     getElementsByTagNameLink(path:string, fileName:string, isFile: boolean = true): Element[]{
-        const cacheKey = isFile ? `${fileName}::${path}` : null;
+        const cacheKey = this.shouldCacheQuery(path, isFile) ? `${fileName}::${path}` : null;
         if (cacheKey && this.tagLinkQueryCache.has(cacheKey)) {
             return this.tagLinkQueryCache.get(cacheKey);
         }
@@ -158,6 +158,21 @@ export class ReadXml extends xmloperation{
         return "";
     }
 
+    private shouldCacheQuery(path: string, isFile: boolean): boolean {
+        if (!isFile) {
+            return false;
+        }
+
+        // Row scans are the largest query in the import path. Caching them keeps
+        // full sheet row trees alive for the entire workbook parse and causes
+        // GC-heavy slowdowns in WKWebView.
+        if (path === "sheetData/row") {
+            return false;
+        }
+
+        return true;
+    }
+
     
 }
 
@@ -166,8 +181,6 @@ export class Element extends xmloperation {
     attributeList:IattributeList
     value:string
     container:string
-    private innerElementsCache: Map<string, Element[] | null> = new Map();
-    private innerElementsTagLinkCache: Map<string, Element[] | null> = new Map();
     constructor(str:string){
         super();
         this.elementString = str;
@@ -205,9 +218,6 @@ export class Element extends xmloperation {
     * @return Element group
     */
     getInnerElements(tag:string):Element[]{
-        if (this.innerElementsCache.has(tag)) {
-            return this.innerElementsCache.get(tag);
-        }
         let ret = this.getElementsByOneTag(tag,this.elementString);
         let elements:Element[] = [];
 
@@ -217,17 +227,12 @@ export class Element extends xmloperation {
         }
 
         if(elements.length==0){
-            this.innerElementsCache.set(tag, null);
             return null;
         }
-        this.innerElementsCache.set(tag, elements);
         return elements;
     }
 
     getInnerElementsTagLink(tag: string): Element[]{
-        if (this.innerElementsTagLinkCache.has(tag)) {
-            return this.innerElementsTagLinkCache.get(tag);
-        }
         const ret = this.getElementByTagLink(tag, this.elementString);
         let elements:Element[] = [];
 
@@ -236,11 +241,9 @@ export class Element extends xmloperation {
             elements.push(ele);
         }
         if(elements.length==0){
-            this.innerElementsTagLinkCache.set(tag, null);
             return null;
         }
 
-        this.innerElementsTagLinkCache.set(tag, elements);
         return elements;
     }
 
