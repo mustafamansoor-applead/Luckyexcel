@@ -15,6 +15,8 @@ import { generateRandomId } from '../common/method';
 import { IluckySheet, ILuckyFile, IWorkBookInfo } from '../ToLuckySheet/ILuck';
 import { ImageSourceType } from './ILuckInterface';
 import { handleRanges } from '../ToLuckySheet/style';
+import type { TransformExcelToUniverOptions } from '../main';
+import { createProfileLogger } from '../common/profile';
 
 interface Sheets {
     [sheetId: string]: Partial<IWorksheetData & { hyperLink: HyperLink[] }>;
@@ -32,8 +34,9 @@ export class UniverWorkBook implements IWorkbookData {
     sheetOrder!: string[];
     sheets!: Sheets;
     resources?: IResources | undefined = [];
-    constructor(file: ILuckyFile) {
+    constructor(file: ILuckyFile, options: TransformExcelToUniverOptions = {}) {
         const { info, sheets, workbook } = file;
+        const profiler = createProfileLogger(options.profile, 'UniverWorkBook');
         this.id = generateRandomId(6);
         this.name = info.name;
         this.appVersion = info.appversion;
@@ -49,23 +52,44 @@ export class UniverWorkBook implements IWorkbookData {
         sheets
             .sort((a, b) => Number(a.order) - Number(b.order))
             .forEach((d) => {
+                const sheetProfiler = createProfileLogger(options.profile, `UniverWorkBook.sheet:${d.name}`);
                 const sheet = new UniverSheet(d);
                 workSheets[sheet.id] = sheet.mode;
                 sheetsObj[sheet.id] = d;
                 order.push(sheet.id);
+                sheetProfiler.end({
+                    rowCount: sheet.rowCount,
+                    columnCount: sheet.columnCount,
+                    cellRows: Object.keys(sheet.cellData || {}).length,
+                });
             });
 
         // console.log(workSheets,sheets)
         this.handleHyperLinks(workSheets);
+        profiler.mark('hyperlinks mapped');
         this.handleImage(workSheets, sourceSheetsByName);
-        this.handleChart(workSheets, sourceSheetsByName);
+        profiler.mark('images mapped');
+        if (options.includeCharts !== false) {
+            this.handleChart(workSheets, sourceSheetsByName);
+            profiler.mark('charts mapped');
+        } else {
+            profiler.mark('charts skipped');
+        }
         this.handleNames(workbook);
+        profiler.mark('defined names mapped');
         this.handleCondition(sheetsObj);
+        profiler.mark('conditional formatting mapped');
         this.handleVerification(sheetsObj);
+        profiler.mark('data validation mapped');
         this.handleFilter(sheetsObj);
+        profiler.mark('filters mapped');
         this.sheetOrder = order;
 
         this.sheets = workSheets;
+        profiler.end({
+            sheetCount: order.length,
+            resourceCount: this.resources?.length || 0,
+        });
     }
 
     get mode(): IWorkbookData {

@@ -13,9 +13,11 @@ import { UniverWorkBook } from "./LuckyToUniver/UniverWorkBook";
 import { IWorkbookData } from "@univerjs/core";
 import { formatSheetData, getDataByFile } from "./common/utils";
 import { UniverCsvWorkBook } from "./LuckyToUniver/UniverCsvWorkBook";
+import { createProfileLogger } from "./common/profile";
 
 export interface TransformExcelToUniverOptions {
     includeCharts?: boolean;
+    profile?: boolean;
 }
 
 export class LuckyExcel {
@@ -83,13 +85,29 @@ export class LuckyExcel {
         options: TransformExcelToUniverOptions = {}
     ) {
         let handleZip: HandleZip = new HandleZip(excelFile);
+        const profiler = createProfileLogger(options.profile, 'transformExcelToUniver');
 
         handleZip.unzipFile(function (files: IuploadfileList) {
+            profiler.mark('unzip complete', {
+                fileName: excelFile.name,
+                fileSize: excelFile.size,
+                zipEntries: Object.keys(files).length,
+            });
             let luckyFile = new LuckyFile(files, excelFile.name);
             let luckysheetfile = luckyFile.Parse(options);
+            profiler.mark('lucky parse complete', {
+                jsonLength: luckysheetfile.length,
+            });
             let exportJson = JSON.parse(luckysheetfile);
+            profiler.mark('json parse complete', {
+                sheetCount: exportJson?.sheets?.length || 0,
+            });
             if (callback != undefined) {
-                const univerData = new UniverWorkBook(exportJson)
+                const univerData = new UniverWorkBook(exportJson, options)
+                profiler.end({
+                    workbookSheets: univerData.sheetOrder?.length || 0,
+                    resourceCount: univerData.resources?.length || 0,
+                });
                 callback(univerData.mode);
             }
         },

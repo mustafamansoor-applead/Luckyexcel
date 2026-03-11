@@ -7,9 +7,11 @@ import {getXmlAttibute} from "../common/method";
 import { LuckyFileBase,LuckyFileInfo,LuckySheetBase,LuckySheetCelldataBase, WorkBookInfo } from "./LuckyBase";
 import {ImageList} from "./LuckyImage";
 import { LuckyDefineNames } from "./LuckyDefineName";
+import { ProfileLogger, createProfileLogger } from "../common/profile";
 
 export interface LuckyFileParseOptions {
     includeCharts?: boolean;
+    profile?: boolean;
 }
 
 export class LuckyFile extends LuckyFileBase {
@@ -128,7 +130,7 @@ export class LuckyFile extends LuckyFileBase {
     /**
     * @return All sheet , include whole information
     */
-    getSheetsFull(isInitialCell:boolean=true, options: LuckyFileParseOptions = {}){
+    getSheetsFull(isInitialCell:boolean=true, options: LuckyFileParseOptions = {}, profiler?: ProfileLogger){
         let sheets = this.readXml.getElementsByTagName("sheets/sheet", workBookFile);
         let sheetList:IattributeList = {};
         for(let key in sheets){
@@ -156,6 +158,7 @@ export class LuckyFile extends LuckyFileBase {
             }
 
             if(sheetFile!=null){
+                const sheetProfiler = createProfileLogger(options.profile, `LuckyFile.sheet:${sheetName}`);
                 let sheet = new LuckySheet(sheetName, sheetId, order, isInitialCell,
                     {
                         sheetFile:sheetFile,
@@ -169,9 +172,15 @@ export class LuckyFile extends LuckyFileBase {
                         drawingRelsFile: drawingRelsFile,
                         hide: hide,
                         cellImages: this.cellImages,
-                        includeCharts: options.includeCharts !== false
+                        includeCharts: options.includeCharts !== false,
+                        profile: options.profile
                     }
                 )
+                sheetProfiler.end({
+                    cellCount: sheet.celldata?.length || 0,
+                    imageCount: sheet.images ? Object.keys(sheet.images).length : 0,
+                    chartCount: sheet.charts?.length || 0,
+                });
                 this.columnWidthSet = [];
                 this.rowHeightSet = [];
 
@@ -181,6 +190,9 @@ export class LuckyFile extends LuckyFileBase {
                 order++;
             }
         }
+        profiler?.mark('sheets parsed', {
+            sheetCount: this.sheets?.length || 0,
+        });
     }
 
     private columnWidthSet:number[] = [];
@@ -370,10 +382,15 @@ export class LuckyFile extends LuckyFileBase {
     * @return LuckySheet file json
     */
     Parse(options: LuckyFileParseOptions = {}):string{
-        return JSON.stringify(this.ParseObject(options));
+        return JSON.stringify(this.buildParsedFile(options));
     }
 
     ParseObject(options: LuckyFileParseOptions = {}): ILuckyFile {
+        return this.toPlainObject(this.buildParsedFile(options));
+    }
+
+    private buildParsedFile(options: LuckyFileParseOptions = {}): ILuckyFile {
+        const profiler = createProfileLogger(options.profile, 'LuckyFile.parse');
         // let xml = this.readXml;
         // for(let key in this.sheetNameList){
         //     let sheetName=this.sheetNameList[key];
@@ -383,8 +400,12 @@ export class LuckyFile extends LuckyFileBase {
         // return "";
 
         this.getWorkBookInfo();
+        profiler.mark('workbook info parsed');
         this.handleWorkBookInfo();
-        this.getSheetsFull(true, options);
+        profiler.mark('defined names parsed', {
+            defineNameCount: Object.keys(this.workbook?.defineNames || {}).length,
+        });
+        this.getSheetsFull(true, options, profiler);
 
         // for(let i=0;i<this.sheets.length;i++){
         //     let sheet = this.sheets[i];
@@ -407,7 +428,12 @@ export class LuckyFile extends LuckyFileBase {
         //     }
         // }
 
-        return this.toJsonObject(this);
+        const output = this.toJsonObject(this);
+        profiler.end({
+            sheetCount: output.sheets?.length || 0,
+            cellCount: output.sheets?.reduce((sum, sheet) => sum + (sheet.celldata?.length || 0), 0) || 0,
+        });
+        return output;
     }
 
     private toJsonObject(file:ILuckyFile):ILuckyFile{
@@ -555,6 +581,25 @@ export class LuckyFile extends LuckyFileBase {
         });
 
         return LuckyOutPutFile;
+    }
+
+    private toPlainObject<T>(value: T): T {
+        if (Array.isArray(value)) {
+            return value.map((item) => this.toPlainObject(item)) as unknown as T;
+        }
+
+        if (value !== null && typeof value === 'object') {
+            const plainObject: Record<string, unknown> = {};
+            Object.keys(value as Record<string, unknown>).forEach((key) => {
+                const currentValue = (value as Record<string, unknown>)[key];
+                if (currentValue !== undefined) {
+                    plainObject[key] = this.toPlainObject(currentValue);
+                }
+            });
+            return plainObject as T;
+        }
+
+        return value;
     }
 
 
