@@ -242,7 +242,7 @@ export class LuckySheetCelldata extends LuckySheetCelldataBase {
                     cellValue = {
                         ...cellValue,
                         ...fontStyle
-                    }
+                    };
                     familyFont = family;
                 }
             }
@@ -862,4 +862,3 @@ export class LuckySheetCelldata extends LuckySheetCelldataBase {
         return {};
     }
 }
-

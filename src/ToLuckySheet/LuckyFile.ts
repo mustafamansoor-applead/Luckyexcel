@@ -4,7 +4,7 @@ import {IuploadfileList, IattributeList} from "../ICommon";
 import {workBookFile, coreFile, appFile, stylesFile, sharedStringsFile,numFmtDefault,theme1File,calcChainFile,workbookRels, numFmtDefaultMap, cellImages} from "../common/constant";
 import { ReadXml,IStyleCollections,Element } from "./ReadXml";
 import {getXmlAttibute} from "../common/method";
-import { LuckyFileBase,LuckyFileInfo,LuckySheetBase,LuckySheetCelldataBase, WorkBookInfo } from "./LuckyBase";
+import { LuckyFileBase,LuckyFileInfo,LuckySheetBase, WorkBookInfo } from "./LuckyBase";
 import {ImageList} from "./LuckyImage";
 import { LuckyDefineNames } from "./LuckyDefineName";
 
@@ -365,6 +365,10 @@ export class LuckyFile extends LuckyFileBase {
     * @return LuckySheet file json
     */
     Parse():string{
+        return JSON.stringify(this.ParseObject());
+    }
+
+    ParseObject(): ILuckyFile {
         // let xml = this.readXml;
         // for(let key in this.sheetNameList){
         //     let sheetName=this.sheetNameList[key];
@@ -398,10 +402,10 @@ export class LuckyFile extends LuckyFileBase {
         //     }
         // }
 
-        return this.toJsonString(this);
+        return this.toJsonObject(this);
     }
 
-    private toJsonString(file:ILuckyFile):string{
+    private toJsonObject(file:ILuckyFile):ILuckyFile{
         let LuckyOutPutFile = new LuckyFileBase();
         LuckyOutPutFile.info = file.info;
         LuckyOutPutFile.workbook = file.workbook;
@@ -475,15 +479,7 @@ export class LuckyFile extends LuckyFileBase {
             }
 
             if(sheet.celldata!=null){
-                // sheetout.celldata = sheet.celldata;
-                sheetout.celldata = [];
-                sheet.celldata.forEach((cell)=>{
-                    let cellout = new LuckySheetCelldataBase();
-                    cellout.r = cell.r;
-                    cellout.c = cell.c;
-                    cellout.v = cell.v;
-                    sheetout.celldata.push(cellout);
-                });
+                sheetout.celldata = sheet.celldata;
             }
 
             if(sheet.chart!=null){
@@ -545,7 +541,7 @@ export class LuckyFile extends LuckyFileBase {
             LuckyOutPutFile.sheets.push(sheetout);
         });
 
-        return JSON.stringify(LuckyOutPutFile);
+        return LuckyOutPutFile;
     }
 
 

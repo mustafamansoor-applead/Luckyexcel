@@ -254,8 +254,28 @@ export class LuckySheet extends LuckySheetBase {
         let drawingFile = allFileOption.drawingFile, drawingRelsFile = allFileOption.drawingRelsFile;
         if(drawingFile!=null && drawingRelsFile!=null){
             this.getImageBaseInfo(drawingFile, drawingRelsFile)
-        } 
+        }
+
+        this.sanitizeCellData();
     }
+
+    private sanitizeCellData = () => {
+        this.celldata.forEach((cell: any) => {
+            delete cell._borderObject;
+            delete cell._fomulaRef;
+            delete cell._formulaSi;
+            delete cell._formulaType;
+            delete cell.sheetFile;
+            delete cell.readXml;
+            delete cell.cell;
+            delete cell.styles;
+            delete cell.sharedStrings;
+            delete cell.mergeCells;
+            delete cell.cellImages;
+            delete cell.imageList;
+            delete cell.cellSize;
+        });
+    };
 
     private getImageBaseInfo = (drawingFile: string, drawingRelsFile: string): any => {
         let twoCellAnchors = this.readXml.getElementsByTagName("xdr:twoCellAnchor", drawingFile);

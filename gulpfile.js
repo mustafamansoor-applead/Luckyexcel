@@ -244,7 +244,7 @@ function serve() {
 // 顺序执行
 const dev = series(clean, copyHtml, bundle, watcher, serve);
 
-const build = series(clean, parallel(compile, bundleUMD));
+const build = series(clean, parallel(copyHtml, compile, bundleUMD));
 
 // 每次TypeScript文件改变时Browserify会执行bundle函数
 watchedBrowserify.on("update", series(bundle, reload));

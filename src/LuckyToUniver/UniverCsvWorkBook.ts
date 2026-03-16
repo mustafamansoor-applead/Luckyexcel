@@ -22,7 +22,7 @@ export class UniverCsvWorkBook implements IWorkbookData {
     sheets!: { [sheetId: string]: Partial<IWorksheetData> };
     resources?: IResources | undefined;
     constructor(data: string[][]) {
-        console.log(data);
+        console.info(`[LuckyExcel] Building Univer workbook from CSV (${data.length} rows)`);
         const cellData: IObjectMatrixPrimitiveType<ICellData> = {};
 
         let rowCount = 0,
@@ -43,6 +43,9 @@ export class UniverCsvWorkBook implements IWorkbookData {
         this.sheetOrder = [sheetId];
         this.id = generateRandomId(6);
         this.name = this.id;
+        console.info(
+            `[LuckyExcel] CSV workbook ready (${rowCount} rows x ${colCount} columns)`
+        );
     }
     get mode(): IWorkbookData {
         return {

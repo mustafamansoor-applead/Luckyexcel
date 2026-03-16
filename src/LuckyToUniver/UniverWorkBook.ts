@@ -34,6 +34,7 @@ export class UniverWorkBook implements IWorkbookData {
     resources?: IResources | undefined = [];
     constructor(file: ILuckyFile) {
         const { info, sheets, workbook } = file;
+        console.info(`[LuckyExcel] Building Univer workbook (${sheets.length} sheets)`);
         this.id = generateRandomId(6);
         this.name = info.name;
         this.appVersion = info.appversion;
@@ -62,6 +63,9 @@ export class UniverWorkBook implements IWorkbookData {
         this.sheetOrder = order;
 
         this.sheets = workSheets;
+        console.info(
+            `[LuckyExcel] Univer workbook ready (${this.sheetOrder.length} sheets, ${this.resources?.length || 0} resource groups)`
+        );
     }
 
     get mode(): IWorkbookData {
