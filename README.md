@@ -30,7 +30,7 @@ The goal is to support all features supported by Univer
 ### CDN
 ```html
 <script src="https://unpkg.com/@univerjs/core/lib/umd/index.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@zwight/luckyexcel/dist/luckyexcel.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@applead/luckyexcel/dist/luckyexcel.umd.min.js"></script>
 <script>
     // Univer import Excel file
     LuckyExcel.transformExcelToUniver(
@@ -98,12 +98,22 @@ The goal is to support all features supported by Univer
 
 #### Installation
 ```shell
-npm install @zwight/luckyexcel
+npm install @applead/luckyexcel
 ```
+
+#### Local package install
+If you want to consume this repository before publishing it to npm:
+
+```shell
+npm pack
+npm install /absolute/path/to/zwight-luckyexcel-1.1.6.tgz
+```
+
+Before publishing to npm under your own account, update the `name` field in `package.json` to a package name or scope you control.
 
 #### ES import
 ```js
-import LuckyExcel from '@zwight/luckyexcel'
+import LuckyExcel from '@applead/luckyexcel'
 
 // After getting the xlsx file
 LuckyExcel.transformExcelToUniver(

@@ -1,7 +1,7 @@
 // gulp
 const gulp = require("gulp");
 // gulp 核心方法
-const { src, dest, series, parallel, watch } = require('gulp');
+const { dest, series, parallel } = require('gulp');
 // 浏览器加载Nodejs模块
 const browserify = require("browserify");
 // vinyl-source-stream会将Browserify的输出文件适配成gulp能够解析的格式
@@ -39,11 +39,6 @@ const terser = require('rollup-plugin-terser').terser;
 
 const pkg = require('./package.json');
 
-
-const paths = {
-    pages: ['assets/univer-import-export-script/**'],
-};
-
 // babel config
 // const babelConfig = {
 //     babelHelpers: 'bundled',
@@ -62,26 +57,6 @@ const paths = {
 //         '@babel/preset-typescript'
 //     ]
 // };
-
-// Copy html
-function copyHtml() {
-    return src(paths.pages)
-        .pipe(dest("dist"));
-}
-
-// Refresh browser
-function reloadBrowser(done) {
-    reload();
-
-    done();
-}
-
-// Monitoring static file changes
-function watcher(done) {
-    // watch static
-    watch(paths.pages, { delay: 500 }, series(copyHtml, reloadBrowser));
-    done();
-}
 
 // 监听文件改变
 const watchedBrowserify = watchify(browserify({
@@ -242,9 +217,9 @@ function serve() {
 }
 
 // 顺序执行
-const dev = series(clean, copyHtml, bundle, watcher, serve);
+const dev = series(clean, bundle, serve);
 
-const build = series(clean, parallel(copyHtml, compile, bundleUMD));
+const build = series(clean, parallel(compile, bundleUMD));
 
 // 每次TypeScript文件改变时Browserify会执行bundle函数
 watchedBrowserify.on("update", series(bundle, reload));
