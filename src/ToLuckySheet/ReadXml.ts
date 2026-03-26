@@ -1,5 +1,5 @@
 import {IuploadfileList, IattributeList, stringToNum} from "../ICommon";
-import {indexedColors}  from "../common/constant";
+import {excelThemeClrSchemeOrder, indexedColors}  from "../common/constant";
 import {LightenDarkenColor}  from "../common/method";
 
 
@@ -292,6 +292,64 @@ export interface IStyleCollections {
     [index:string]:Element[] | IattributeList
 }
 
+function getThemeColorValue(clrSchemeElement: Element | undefined): string | undefined {
+    if(clrSchemeElement == null){
+        return undefined;
+    }
+
+    let clrs = clrSchemeElement.getInnerElements("a:sysClr|a:srgbClr");
+    if(clrs == null || clrs.length === 0){
+        return undefined;
+    }
+
+    let clr = clrs[0];
+    let clrAttrList = clr.attributeList;
+    if(clr.container.indexOf("sysClr") > -1){
+        let value = clrAttrList.lastClr || clrAttrList.val;
+        return value != null ? "#" + value : undefined;
+    }
+    else if(clr.container.indexOf("srgbClr") > -1){
+        return clrAttrList.val != null ? "#" + clrAttrList.val : undefined;
+    }
+
+    return undefined;
+}
+
+export function getNormalizedThemeColors(clrScheme: Element[] | undefined): IattributeList {
+    let resolvedThemeColors:IattributeList = {};
+    if(clrScheme == null || clrScheme.length === 0){
+        return resolvedThemeColors;
+    }
+
+    for(let themeIndex = 0; themeIndex < excelThemeClrSchemeOrder.length; themeIndex++){
+        let clrSchemeIndex = excelThemeClrSchemeOrder[themeIndex];
+        let value = getThemeColorValue(clrScheme[clrSchemeIndex]);
+        if(value != null){
+            resolvedThemeColors[themeIndex.toString()] = value;
+        }
+    }
+
+    return resolvedThemeColors;
+}
+
+function getLegacyThemeColor(theme: string, clrScheme: Element[] | undefined): string | undefined {
+    if(clrScheme == null || clrScheme.length === 0){
+        return undefined;
+    }
+
+    let themeNum = parseInt(theme);
+    if(Number.isNaN(themeNum)){
+        return undefined;
+    }
+
+    let clrSchemeIndex = excelThemeClrSchemeOrder[themeNum];
+    if(clrSchemeIndex == null){
+        return undefined;
+    }
+
+    return getThemeColorValue(clrScheme[clrSchemeIndex]);
+}
+
 function combineIndexedColor(indexedColorsInner:Element[], indexedColors:IattributeList):IattributeList{
     let ret:IattributeList = {};
     if(indexedColorsInner==null || indexedColorsInner.length==0){
@@ -316,6 +374,7 @@ function combineIndexedColor(indexedColorsInner:Element[], indexedColors:Iattrib
 export function getColor(color:Element, styles:IStyleCollections , type:string="g"){
     let attrList = color.attributeList;
     let clrScheme = styles["clrScheme"] as Element[];
+    let resolvedThemeColors = styles["resolvedThemeColors"] as IattributeList;
     let indexedColorsInner = styles["indexedColors"] as Element[];
     let mruColorsInner = styles["mruColors"];
     let indexedColorsList = combineIndexedColor(indexedColorsInner, indexedColors);
@@ -334,49 +393,10 @@ export function getColor(color:Element, styles:IStyleCollections , type:string="
         bg = "#"+rgb;
     }
     else if(theme!=null){
-        let themeNum = parseInt(theme);
-        if(themeNum==0){
-            themeNum = 1;
+        bg = resolvedThemeColors != null ? resolvedThemeColors[theme] : undefined;
+        if(bg == null){
+            bg = getLegacyThemeColor(theme, clrScheme);
         }
-        else if(themeNum==1){
-            themeNum = 0;
-        }
-        else if(themeNum==2){
-            themeNum = 3;
-        }
-        else if(themeNum==3){
-            themeNum = 2;
-        }
-        let clrSchemeElement = clrScheme[themeNum];
-        if(clrSchemeElement!=null){
-            let clrs = clrSchemeElement.getInnerElements("a:sysClr|a:srgbClr");
-            if(clrs!=null){
-                let clr = clrs[0];
-                let clrAttrList = clr.attributeList;
-                // console.log(clr.container, );
-                if(clr.container.indexOf("sysClr")>-1){
-                    // if(type=="g" && clrAttrList.val=="windowText"){
-                    //     bg = null;
-                    // }
-                    // else if((type=="t" || type=="b") && clrAttrList.val=="window"){
-                    //     bg = null;
-                    // }                    
-                    // else 
-                    if(clrAttrList.lastClr!=null){
-                        bg = "#" + clrAttrList.lastClr;
-                    }
-                    else if(clrAttrList.val!=null){
-                        bg = "#" + clrAttrList.val;
-                    }
-
-                }
-                else if(clr.container.indexOf("srgbClr")>-1){
-                    // console.log(clrAttrList.val);
-                    bg = "#" + clrAttrList.val;
-                }
-            }
-        }
-        
     }
     
     if(tint!=null){
